@@ -128,7 +128,7 @@ Copies land in `~/.readio/books`. Use `readio --home <dir>` to keep a separate l
 | `/find <term>` | search the whole book; type a number to jump to that hit |
 | `/mark [note]` `/marks [n]` `/unmark <n>` | keep a place, list places, drop one |
 | `/mode [manual\|auto\|aloud]` `/auto` | choose a reading mode · toggle Manual/Auto |
-| `/effort [level]` `/rate <0.5-3>` `/speed <n>` | reading effort · retune its multiplier · base reveal speed |
+| `/effort [level\|<multiplier>]` `/rate <0.5-3>` `/speed <n>` | reading effort, or a pace of your own · retune its multiplier · base reveal speed |
 | `/voice` (`/tts` alias) `/device` | download and configure voices · restrict audio output |
 | `/context` `/progress` | session readout · one-line position |
 | `/lang en\|zh` `/clear` `/help` `/quit` | interface language · clear · help · exit |
@@ -194,7 +194,7 @@ A multilingual model still has to be told which language it is looking at, and i
 
 While a passage is spoken, its sentence is washed lightly and the word or character being sounded is washed deeply, and the reveal speed follows each clip's real duration rather than a guess.
 
-Speed works the way an audiobook app's does. In Read-aloud, `[` and `]` step through 0.75×, 1×, 1.25×, 1.5× and 2×; `/rate` accepts any value from 0.5 to 3 for the current effort level, while `^r` cycles the named effort levels used by both text and voice. The embedded player changes tempo through libsonic while preserving pitch. Canonical 1× clips, the current audio pointer, the synthesis cache and everything already prefetched remain valid across a speed change.
+Speed works the way an audiobook app's does. In Read-aloud, `[` and `]` step through 0.75×, 1×, 1.25×, 1.5× and 2×; `/rate` accepts any value from 0.5 to 3 for the current effort level, `/effort 1.25` sets a pace of your own between two named levels (shown as `(custom)` beside the model), while `^r` cycles the named effort levels used by both text and voice. The embedded player changes tempo through libsonic while preserving pitch. Canonical 1× clips, the current audio pointer, the synthesis cache and everything already prefetched remain valid across a speed change.
 
 Space pauses at the live PCM frame and resumes from the same audio millisecond. `←` and `→` move to the previous or next textual sentence without leaving Read-aloud. Token reveal and both highlight levels sample the same presentation clock as the audio, so pausing, seeking and changing speed cannot make text run on by itself.
 

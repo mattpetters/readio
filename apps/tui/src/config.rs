@@ -503,6 +503,7 @@ impl Config {
              \x20   high: {high}\n\
              \x20   xhigh: {xhigh}\n\
              \x20   max: {max}\n\
+             \x20   custom: {custom}\n\
              \n\
              images:\n\
              {IMAGES_NOTE}\
@@ -536,6 +537,7 @@ impl Config {
             high = trim_float(self.effort.multipliers.high),
             xhigh = trim_float(self.effort.multipliers.xhigh),
             max = trim_float(self.effort.multipliers.max),
+            custom = trim_float(self.effort.multipliers.custom),
             images = self.images.enabled,
             rows = self.images.max_rows,
             engine = self.voice.engine,
@@ -625,6 +627,9 @@ const EFFORT_NOTE: &str = "  # Reading pace, shown as the reasoning effort of th
   # 阅读节奏，界面上显示为模型的推理强度。每档就是一个倍数：
   # 文字按 speed × 倍数 吐出，朗读直接按这个倍数播放。强度越高读得越慢。
   # level: minimal | low | medium | high | xhigh | max —— /effort 或 ^r 切换
+  # custom: the last pace typed as a number, /effort 1.25 — not a rung, so ^r
+  #   steps off it onto the named level nearest below it.
+  # custom: 上一次用倍数指定的节奏（/effort 1.25）。它不是档位，^r 会从它跳到下面最近的档。
 ";
 
 const IMAGES_NOTE: &str = "  # native terminal images are at most max_rows tall

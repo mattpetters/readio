@@ -128,9 +128,11 @@ Reading pace is presented as the model's reasoning effort, and the honest conseq
 | `xhigh` | 0.85× | slow, words stay with you |
 | `max` | 0.7× | close reading, sentence by sentence |
 
+Six levels, and no reader is obliged to live on one of them: **`/effort <number>` takes any multiplier the player can read at (0.5–3.0)**, so `/effort 1.25` lands between `high` and `medium` for someone who finds one too slow and the other too brisk. A pace typed this way is not a rung — it has a level of its own, shown as `readio-1 (custom)` with its number in the status line and in the select — kept in a `custom` slot so choosing a named level later never overwrites it, and so `/effort custom` (or picking the row) brings it back. `^r` from a custom pace steps onto the named rung at or below it, so one keypress always leaves the reader on a level the ladder can name.
+
 One multiplier drives both worlds: text appears at `reading.speed × multiplier`, and read-aloud plays at the multiplier itself, so a level means the same thing whether the book is being typed out or spoken. That is also why `^r` is a single key — it always means "change how fast I am reading" — and why `crate::effort` owns the arithmetic while `App::apply_pace` is the only thing that hands a number to the pacer.
 
-The numbers belong to the reader, not to readio. All six live under `effort.multipliers` in the config file; `/rate <0.5-3.0>` retunes the level in force and writes it back, so `/effort xhigh` then `/rate 0.9` is how someone makes their slow gear their own; `/speed <n>` moves the base the multipliers scale. `/effort` with no argument opens the ladder above the composer, each level showing the multiplier behind it and `(active)` on the one in force — the one place the costume and the honest numbers sit side by side.
+The numbers belong to the reader, not to readio. All six live under `effort.multipliers` in the config file, alongside the `custom` slot; `/rate <0.5-3.0>` retunes the level in force and writes it back, so `/effort xhigh` then `/rate 0.9` is how someone makes their slow gear their own; `/speed <n>` moves the base the multipliers scale. `/effort` with no argument opens the ladder above the composer, each level showing the multiplier behind it and `(active)` on the one in force — the one place the costume and the honest numbers sit side by side, and the custom pace listed where its number belongs among them.
 
 Speech clips are rendered and cached once as canonical 1× audio. The embedded
 player applies the effort multiplier at the live playback cursor through
@@ -441,7 +443,7 @@ reading:
   speed: 46               # characters per second at effort high; the multiplier scales it
   mode: manual            # manual | auto | aloud; shift+tab cycles all three
 effort:
-  level: high             # minimal | low | medium | high | xhigh | max
+  level: high             # minimal | low | medium | high | xhigh | max (+ custom after /effort <n>)
   multipliers:            # more effort reads more slowly; /rate retunes one
     minimal: 2.5
     low: 2
@@ -449,6 +451,7 @@ effort:
     high: 1
     xhigh: 0.85
     max: 0.7
+    custom: 1.25          # the last number typed as /effort <n>; not a rung
 images:
   enabled: true
   max_rows: 16            # tallest an illustration may be drawn
@@ -506,7 +509,7 @@ The host directory:
 | Area | Commands |
 | --- | --- |
 | Library | `/lib` `/open <n>` `/import <path> [--copy\|--link\|--move]` `/forget <n>` `/sample` |
-| Reading | `/mode [manual\|auto\|aloud]` `/effort [level]` `/toc` `/goto <n>` `/next` `/prev` `/find <term>` `/auto` `/plan` `/context` `/progress` `/speed <n>` |
+| Reading | `/mode [manual\|auto\|aloud]` `/effort [level\|<multiplier>]` `/toc` `/goto <n>` `/next` `/prev` `/find <term>` `/auto` `/plan` `/context` `/progress` `/speed <n>` |
 | Bookmarks | `/mark [note]` `/marks [n]` `/unmark <n>` |
 | Read-aloud | `/voice` `/rate <0.5-3.0>` `/device` |
 | Interface | `/lang en\|zh` `/help` `/quit` |
@@ -523,7 +526,7 @@ cargo test          # wrapping, pacing, parsing, import modes, reading, whole fr
 
 - `tests/render.rs` draws a real `App` through ratatui's `TestBackend` and asserts on the screen, so "is the library offered", "did typing 2 open the second book", "does esc interrupt without discarding" and "does `^c` discard" all have regression cover.
 - `tests/select.rs` pins the two rules the select lives by: it keeps its narrowing text out of the composer, a `/` always escapes it into a command, a filter that would empty the list is refused, choosing a row records the result rather than the command, and a bare `/import` opens the filesystem at `~/` and walks into directories.
-- `tests/effort.rs` holds the pace honest: `^r` walks the ladder and the pacer slows with it, a level names what it is worth, `/rate` retunes only the level in force and writes it back, and `/speed` moves the base the multiplier scales.
+- `tests/effort.rs` holds the pace honest: `^r` walks the ladder and the pacer slows with it, a level names what it is worth, `/rate` retunes only the level in force and writes it back, `/speed` moves the base the multiplier scales, and a typed number (`/effort 1.25`) becomes a `(custom)` pace that survives a named level, is refused when the player could not read at it, and steps back onto the ladder with one `^r`.
 - `tests/mode.rs` verifies the three-mode `shift+tab` cycle, the `^s` shortcut back to the previous mode, persistence, and that unavailable TTS stops in Read-aloud without falling back to Auto.
 - `tests/find.rs` walks search → jump by number → the term deeply washed, asserts the counts are true counts, that `^g` says so when it wraps, and that `^g` with no search points back at `/find`.
 - `tests/library.rs` covers the filesystem consequences of each import mode, that a second import of the same book adds no second entry, and that `/forget` never deletes a file the reader owns.

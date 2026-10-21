@@ -43,7 +43,7 @@ beside the activity.
    城市、文学与历史                                                               
    —— 阅读《看不见的城市》                                                        
                                                                                 
- ❯ /effort <level>   推理强度，其实就是读得多快多慢                               ← menu (only when /)
+ ❯ /effort <level|1.25>   推理强度，其实就是读得多快多慢                            ← menu (only when /)
    …                                                                            
 ╭──────────────────────────────────────────────────────────────────────╮        
 │❯ 回车继续读，/ 看命令，esc 中断                                       │        ← prompt
@@ -85,7 +85,9 @@ Six levels, the six a coding agent offers, and the honest consequence of asking 
 
 One multiplier drives both worlds: text appears at `reading.speed × multiplier`, and read-aloud plays at the multiplier itself. So a level means the same thing whether the book is being typed out or spoken, and `^r` is one key that always means "change how fast I am reading".
 
-The numbers belong to the reader. All six live under `effort.multipliers` in `~/.readio/config.yaml`, `/rate <0.5-3.0>` retunes the level in force without opening the file, and `/speed <n>` moves the base the multipliers scale. `/effort` with no argument opens the ladder as a select, with each level's multiplier beside it and the one in force marked — the one place the honest numbers and the costume sit side by side.
+Six levels, and no reader has to live on one of them. `/effort <number>` takes any multiplier the player can read at (0.5–3.0): `/effort 1.25` sits between `high` and `medium`, for the reader who finds the first too slow and the second too brisk. A pace typed that way is a level of its own rather than a rung — the header says `(custom)`, the status line carries its number, and it keeps a slot of its own so choosing a named level later does not overwrite it and `/effort custom` brings it back. `^r` from a custom pace steps onto the named rung at or below it, because one keypress should never leave someone on a level they cannot name.
+
+The numbers belong to the reader. All six live under `effort.multipliers` in `~/.readio/config.yaml`, `/rate <0.5-3.0>` retunes the level in force without opening the file, and `/speed <n>` moves the base the multipliers scale. `/effort` with no argument opens the ladder as a select, with each level's multiplier beside it and the one in force marked — the one place the honest numbers and the costume sit side by side, with a custom pace listed where its number belongs among them.
 
 ## Pace, when the voice has it
 

@@ -239,3 +239,115 @@ fn speed_moves_the_base_the_multiplier_scales() {
         "the level in force should be named:\n{view}"
     );
 }
+
+/// `/effort 1.25`: a number where a level goes, for the reader who finds `high`
+/// (1×) too slow and `medium` (1.5×) too brisk. It is not a rung, so it gets a
+/// level of its own and `(custom)` beside the model name — but the pace is real,
+/// and the pacer runs at it straight away.
+#[test]
+fn a_typed_multiplier_is_a_pace_between_the_rungs() {
+    let _guard = exclusive();
+    let (mut app, mut terminal) = fixture();
+    settle(&mut app, &mut terminal);
+
+    type_line(&mut app, "/effort 1.25");
+    let view = draw(&mut app, &mut terminal, 3);
+
+    assert_eq!(
+        saved_level(),
+        Effort::Custom,
+        "a number is a level of its own"
+    );
+    assert!(
+        (saved_multiplier(Effort::Custom) - 1.25).abs() < 0.001,
+        "the number should be written down: {}",
+        saved_multiplier(Effort::Custom)
+    );
+    assert!((app.multiplier() - 1.25).abs() < 0.001, "applied at once");
+    // 46 base × 1.25 = 57.5: faster than high's 46, slower than medium's 69.
+    assert!(
+        (app.turn.cps() - 57.5).abs() < 1.0,
+        "expected 46 × 1.25, got {}",
+        app.turn.cps()
+    );
+    assert!(view.contains("1.25×"), "{view}");
+    assert!(
+        view.contains("(custom)"),
+        "the header should say the pace is the reader's own:\n{view}"
+    );
+}
+
+#[test]
+fn a_custom_pace_survives_a_named_level_and_can_be_returned_to() {
+    let _guard = exclusive();
+    let (mut app, mut terminal) = fixture();
+    settle(&mut app, &mut terminal);
+
+    type_line(&mut app, "/effort 1.25");
+    draw(&mut app, &mut terminal, 2);
+    type_line(&mut app, "/effort high");
+    let view = draw(&mut app, &mut terminal, 2);
+
+    assert_eq!(saved_level(), Effort::High, "a named rung is a rung again");
+    assert!(
+        !view.contains("(custom)"),
+        "the header should name a rung again:\n{view}"
+    );
+    assert!(
+        (saved_multiplier(Effort::Custom) - 1.25).abs() < 0.001,
+        "choosing a rung must not eat the reader's own number: {}",
+        saved_multiplier(Effort::Custom)
+    );
+
+    // And it is still there: `/effort custom` is the way back to it.
+    type_line(&mut app, "/effort custom");
+    let view = draw(&mut app, &mut terminal, 3);
+    assert_eq!(saved_level(), Effort::Custom);
+    assert!((app.multiplier() - 1.25).abs() < 0.001);
+    assert!(view.contains("(custom)"), "{view}");
+}
+
+/// `^r` means one step slower from anywhere, including from a number: it lands
+/// on the named rung at or below the pace, so the reader is never stranded on a
+/// level the menu cannot mark.
+#[test]
+fn ctrl_r_from_a_custom_pace_lands_on_the_named_rung_below() {
+    let _guard = exclusive();
+    let (mut app, mut terminal) = fixture();
+    settle(&mut app, &mut terminal);
+
+    type_line(&mut app, "/effort 1.25");
+    draw(&mut app, &mut terminal, 2);
+    let custom = app.turn.cps();
+
+    ctrl(&mut app, 'r');
+    let view = draw(&mut app, &mut terminal, 3);
+
+    assert_eq!(saved_level(), Effort::High, "1.0 is the rung below 1.25");
+    assert!(
+        app.turn.cps() < custom,
+        "more effort reads more slowly: {} vs {custom}",
+        app.turn.cps()
+    );
+    assert!(view.contains("(high)"), "{view}");
+}
+
+#[test]
+fn a_number_the_player_cannot_read_at_is_refused_not_clamped() {
+    let _guard = exclusive();
+    let (mut app, mut terminal) = fixture();
+    settle(&mut app, &mut terminal);
+
+    type_line(&mut app, "/effort 9");
+    let view = draw(&mut app, &mut terminal, 3);
+    assert_eq!(saved_level(), Effort::High, "nothing should have changed");
+    assert!(
+        (saved_multiplier(Effort::Custom) - 1.25).abs() < 0.001,
+        "and 9 is not 3"
+    );
+    assert!(view.contains("/effort"), "expected the usage line:\n{view}");
+
+    type_line(&mut app, "/effort 0.25");
+    draw(&mut app, &mut terminal, 2);
+    assert_eq!(saved_level(), Effort::High);
+}

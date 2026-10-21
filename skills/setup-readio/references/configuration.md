@@ -32,7 +32,7 @@ comments. Preserve unknown keys, custom engines, and per-book entries.
 ```text
 /lang zh
 /mode manual | auto | aloud
-/effort minimal | low | medium | high | xhigh | max
+/effort minimal | low | medium | high | xhigh | max | <multiplier>
 /speed <4-4000>
 /rate <0.5-3>
 /voice
@@ -41,7 +41,9 @@ comments. Preserve unknown keys, custom engines, and per-book entries.
 
 `shift+tab` cycles Manual → Auto → Read-aloud; `^r` cycles effort. Higher
 effort reads more slowly. Effort controls text reveal and audiobook playback,
-so do not create contradictory pace settings.
+so do not create contradictory pace settings. `/effort 1.25` sets any
+multiplier from 0.5 to 3 as a custom pace between the named levels; it is stored
+in the `custom` slot and shown as `(custom)`, and `/effort custom` returns to it.
 
 Canonical common fields:
 
@@ -53,7 +55,15 @@ reading:
   mode: manual # manual | auto | aloud
 
 effort:
-  level: high # minimal | low | medium | high | xhigh | max
+  level: high # minimal | low | medium | high | xhigh | max | custom
+  multipliers: # /rate <0.5-3> retunes the level in force
+    minimal: 2.5
+    low: 2
+    medium: 1.5
+    high: 1
+    xhigh: 0.85
+    max: 0.7
+    custom: 1.25 # last /effort <multiplier>; not a rung
 
 images:
   enabled: true

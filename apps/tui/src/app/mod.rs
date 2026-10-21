@@ -3188,7 +3188,12 @@ impl App {
         }
     }
 
-    /// `/effort [minimal|low|medium|high|xhigh|max]`
+    /// `/effort [minimal|low|medium|high|xhigh|max|<multiplier>]`
+    ///
+    /// A name picks a rung. A number picks a pace of the reader's own, kept in
+    /// the `custom` slot: `/effort 1.25` for someone who finds `high` (1×) too
+    /// slow and `medium` (1.5×) too brisk. The names are tried first so the
+    /// bare integers `1`–`5` still mean the rungs they always meant.
     fn effort_command(&mut self, arg: &str) {
         if arg.is_empty() {
             self.open_select("effort");
@@ -3196,7 +3201,13 @@ impl App {
         }
         match Effort::parse(arg) {
             Some(level) => self.set_effort(level),
-            None => self.system(t("effort.usage")),
+            None => match effort::parse_multiplier(arg) {
+                Some(multiplier) => {
+                    self.cfg.effort.multipliers.set(Effort::Custom, multiplier);
+                    self.set_effort(Effort::Custom);
+                }
+                None => self.system(t("effort.usage")),
+            },
         }
     }
 
@@ -3214,7 +3225,7 @@ impl App {
             return;
         }
         match arg.trim_end_matches(['x', 'X', '×']).parse::<f32>() {
-            Ok(v) if (0.5..=3.0).contains(&v) => {
+            Ok(v) if (effort::MIN..=effort::MAX).contains(&v) => {
                 let level = self.cfg.effort.level;
                 self.cfg.effort.multipliers.set(level, v);
                 // Re-entering the level applies the new presentation rate at
@@ -3229,8 +3240,12 @@ impl App {
 
     /// `^r`: the next effort level, and with it the next pace — one key that
     /// means "read faster" whether the words are being typed or spoken.
+    ///
+    /// From a custom pace the ladder answers, so one press always leaves the
+    /// reader on a named rung rather than on a number they can no longer see.
     fn step_speed(&mut self) {
-        self.set_effort(self.cfg.effort.level.next());
+        let next = self.cfg.effort.level.next(&self.cfg.effort.multipliers);
+        self.set_effort(next);
     }
 
     /// `[` / `]`: a direct audiobook control, independent of the named effort

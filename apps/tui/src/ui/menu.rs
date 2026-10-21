@@ -25,7 +25,7 @@ use ratatui::widgets::{Paragraph, Widget};
 
 use crate::book::Book;
 use crate::config::Config;
-use crate::effort;
+use crate::effort::{self, Effort};
 use crate::i18n::{Lang, t};
 use crate::library::Library;
 use crate::mode::Mode;
@@ -462,31 +462,48 @@ fn mark_rows(command: &str, ctx: &Ctx<'_>) -> Vec<Row> {
 }
 
 fn effort_rows(ctx: &Ctx<'_>) -> Vec<Row> {
-    effort::LEVELS
+    // Paired with the multiplier each row stands for, because the custom pace
+    // has to be listed where its number belongs rather than tacked on the end.
+    let mut rungs: Vec<(f32, Row)> = effort::LEVELS
         .iter()
         .map(|level| {
             let multiplier = ctx.cfg.effort.multipliers.get(*level);
-            let cps = (ctx.base_cps * multiplier).round() as usize;
-            let more = crate::i18n::tf(
-                "effort.row_more",
-                &[
-                    &level.label(),
-                    &effort::times(multiplier),
-                    &level.about(),
-                    &crate::metrics::rate_label(cps as f32),
-                ],
-            );
-            value(
-                level.label(),
-                &format!("effort {}", level.code()),
-                // Right-aligned, so six multipliers read as a column rather than
-                // as six different sentences.
-                format!("{:>5}   {}", effort::times(multiplier), level.about()),
-                more,
-                *level == ctx.cfg.effort.level,
-            )
+            (multiplier, effort_row(ctx, *level, multiplier))
         })
-        .collect()
+        .collect();
+    // The reader's own number is a pace, not a rung, so it is offered only
+    // while it is the one in force — and it is offered then, because the select
+    // has to land on the answer in force or `⏎` would silently change the pace.
+    if ctx.cfg.effort.level == Effort::Custom {
+        let multiplier = ctx.cfg.effort.multipliers.get(Effort::Custom);
+        rungs.push((multiplier, effort_row(ctx, Effort::Custom, multiplier)));
+    }
+    // Fastest first, so the multipliers read as one column of speeds even after
+    // a reader has hand-edited a rung out of the shipped order.
+    rungs.sort_by(|a, b| b.0.total_cmp(&a.0));
+    rungs.into_iter().map(|(_, row)| row).collect()
+}
+
+fn effort_row(ctx: &Ctx<'_>, level: Effort, multiplier: f32) -> Row {
+    let cps = (ctx.base_cps * multiplier).round() as usize;
+    let more = crate::i18n::tf(
+        "effort.row_more",
+        &[
+            &level.label(),
+            &effort::times(multiplier),
+            &level.about(),
+            &crate::metrics::rate_label(cps as f32),
+        ],
+    );
+    value(
+        level.label(),
+        &format!("effort {}", level.code()),
+        // Right-aligned, so the multipliers read as a column rather than
+        // as sentences.
+        format!("{:>5}   {}", effort::times(multiplier), level.about()),
+        more,
+        level == ctx.cfg.effort.level,
+    )
 }
 
 fn mode_rows(ctx: &Ctx<'_>) -> Vec<Row> {
@@ -1210,6 +1227,55 @@ mod tests {
         let rows = offer("/effort x", &ctx!(&cfg));
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].insert, "/effort xhigh");
+    }
+
+    #[test]
+    fn a_custom_pace_is_offered_where_its_number_belongs() {
+        let _guard = crate::i18n::exclusive();
+        crate::i18n::set(Lang::En);
+        let mut cfg = Config::default();
+        cfg.effort.multipliers.set(Effort::Custom, 1.25);
+        cfg.effort.level = Effort::Custom;
+        let rows = offer("/effort ", &ctx!(&cfg));
+
+        assert_eq!(
+            rows.len(),
+            effort::LEVELS.len() + 1,
+            "the six rungs, plus the reader's own number"
+        );
+        let custom = rows
+            .iter()
+            .position(|row| row.insert == "/effort custom")
+            .expect("a row for the custom pace");
+        assert_eq!(
+            custom,
+            3,
+            "1.25× sits between medium (1.5×) and high (1×): {:?}",
+            rows.iter()
+                .map(|row| row.insert.clone())
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            rows[custom].label.contains("active"),
+            "the select lands on the answer in force: {:?}",
+            rows[custom].label
+        );
+        assert!(
+            rows[custom].about.contains("1.25×"),
+            "{:?}",
+            rows[custom].about
+        );
+        assert_eq!(
+            rows.iter().filter(|row| row.active).count(),
+            1,
+            "one pace is in force, not two"
+        );
+
+        // A named rung hides it again: it is a pace, not a seventh rung.
+        cfg.effort.level = Effort::Medium;
+        let rows = offer("/effort ", &ctx!(&cfg));
+        assert_eq!(rows.len(), effort::LEVELS.len());
+        assert!(rows.iter().all(|row| row.insert != "/effort custom"));
     }
 
     #[test]
